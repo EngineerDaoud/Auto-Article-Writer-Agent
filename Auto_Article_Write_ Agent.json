@@ -1,0 +1,866 @@
+{
+  "name": "AI Blog Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $('Blog Writer').item.json.output }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "=Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-cache"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        5780,
+        1500
+      ],
+      "id": "23bda999-4ada-438c-a84d-46cd700d00fa",
+      "name": "Respond to Webhook",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.refLink }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              },
+              "id": "f6e656a8-6dbf-4bec-b12c-63bdefc53f43"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [
+        3640,
+        1600
+      ],
+      "id": "03c98fdb-457b-42eb-9c2e-04b2842b88f7",
+      "name": "Has Reference Link?"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional content analyst and writing style expert.\n\nAnalyze the blog content from this website URL and extract detailed writing intelligence:\n\nWebsite URL: {{ $json.refLink }}\n\nYour task:\n1. Visit and read the blog section or blog posts on this website\n2. Analyze the writing style, tone, vocabulary, sentence structure, and formatting patterns\n3. Identify the types of keywords and phrases they use frequently\n4. Note their heading styles, paragraph length, and content structure\n5. Understand their brand voice and how they connect with their audience\n\nThen return ONLY valid JSON (no markdown, no explanation):\n{\n  \"stylePrompt\": \"A concise 50-word prompt describing this website's exact blog style, tone, vocabulary patterns, sentence structure, and what makes their writing distinctive — written so an AI can replicate it\",\n  \"toneWords\": [\"word1\", \"word2\", \"word3\", \"word4\", \"word5\"],\n  \"sentenceStyle\": \"short and punchy OR long and flowing OR mixed\",\n  \"headingStyle\": \"question-based OR statement-based OR keyword-focused\",\n  \"paragraphLength\": \"short (1-2 lines) OR medium (3-4 lines) OR long (5+ lines)\",\n  \"keyPhrases\": [\"phrase1\", \"phrase2\", \"phrase3\"],\n  \"uniqueFeatures\": \"Any unique structural or stylistic features observed on this blog\",\n  \"topKeywords\": [\"keyword1\", \"keyword2\", \"keyword3\", \"keyword4\", \"keyword5\"]\n}",
+        "options": {
+          "systemMessage": "You are an expert content analyst. Always return valid JSON only — no markdown, no code blocks, no extra text."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        3840,
+        1580
+      ],
+      "id": "71b42771-702f-4f9c-ad4a-3dae89d0ea5c",
+      "name": "Link Analyzer",
+      "retryOnFail": false,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "const formData = $input.item.json;\nreturn {\n  json: {\n    ...formData,\n    refStyleInjection: '',\n    refAnalysis: {}\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3680,
+        2000
+      ],
+      "id": "26b8080d-1886-4a4c-8d5a-dadd6a86b40e",
+      "name": "No Link Skip"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate SEO keywords for this blog.\n\nTopic: {{ $json.topic }}\nBrand: {{ $json.brand }}\nWriting Style: {{ $json.styleName }}\nLanguage: {{ $json.language }}\n\n{% if $json.userKeywords and $json.userKeywords != '' %}\nThe user has provided these keywords — use them as the base:\nUser Keywords: {{ $json.userKeywords }}\nSet the first user-provided keyword as primaryKeyword. Distribute the rest as secondaryKeywords. Add more LSI keywords to complete the set.\n{% else %}\nNo keywords provided — generate them based on the topic and style.\n{% endif %}\n\n{% if $json.refAnalysis and $json.refAnalysis.topKeywords %}\nAlso consider blending these keywords found on the reference website:\nReference Site Keywords: {{ $json.refAnalysis.topKeywords }}\n{% endif %}\n\nKeyword Strategy:\n{{ $json.keywordStrategy }}\n\nReturn ONLY valid JSON. No markdown. No explanation:\n{\n  \"primaryKeyword\": \"exact main keyword phrase\",\n  \"secondaryKeywords\": [\"kw2\", \"kw3\", \"kw4\", \"kw5\", \"kw6\"],\n  \"lsiKeywords\": [\"lsi1\", \"lsi2\", \"lsi3\", \"lsi4\"],\n  \"metaTitle\": \"SEO title under 60 characters\",\n  \"metaDescription\": \"compelling meta description under 160 characters in the {{ $json.styleName }} voice\",\n  \"suggestedH2s\": [\"H2 heading 1\", \"H2 heading 2\", \"H2 heading 3\", \"H2 heading 4\", \"H2 heading 5\"],\n  \"hookQuestion\": \"compelling opening question for the intro\",\n  \"tipBoxText\": \"short practical tip for the tip box\"\n}",
+        "options": {
+          "systemMessage": "You are an expert SEO strategist. Return valid JSON only — no markdown, no code blocks, no extra text."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        4120,
+        2000
+      ],
+      "id": "f4040cf1-536c-4587-8452-0698e19e6a77",
+      "name": "Generate Keywords",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite-preview",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3860,
+        1800
+      ],
+      "id": "735d91a4-6029-4073-842b-3eca0eb1604b",
+      "name": "AI Link Analyzer",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "qYBvguSOc70NxboJ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite-preview",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        4120,
+        2200
+      ],
+      "id": "4dcfe396-be8c-4c5a-a152-987589bd7bd4",
+      "name": "AI Generate Keywords",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "qYBvguSOc70NxboJ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse keyword JSON safely\nconst raw      = $input.item.json.output || '';\n\nlet formData;\ntry { formData = $('Parse Link Analysis').item.json; } catch(e) {}\ntry { if (!formData || !formData.topic) formData = $('No Link Skip').item.json; } catch(e) {}\nif (!formData) formData = $input.item.json;\n\nlet kw = {};\ntry {\n  const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();\n  kw = JSON.parse(cleaned);\n} catch(e) {\n  const userKws = (formData.userKeywords || '').split(',').map(k => k.trim()).filter(Boolean);\n  kw = {\n    primaryKeyword:    userKws[0] || formData.topic,\n    secondaryKeywords: userKws.length > 1 ? userKws.slice(1) : [formData.topic + ' guide', formData.topic + ' tips'],\n    lsiKeywords:       [formData.topic + ' benefits', formData.topic + ' review'],\n    metaTitle:         formData.topic.substring(0, 55),\n    metaDescription:   'Complete guide about ' + formData.topic + '. Expert insights from ' + formData.brand,\n    suggestedH2s:      ['Introduction', 'Key Benefits', 'How It Works', 'Expert Tips', 'Conclusion'],\n    hookQuestion:      'Are you looking for the best way to approach ' + formData.topic + '?',\n    tipBoxText:        'Start with one simple step and build from there.'\n  };\n}\n\nreturn {\n  json: {\n    ...formData,\n    primaryKeyword:    kw.primaryKeyword    || formData.topic,\n    secondaryKeywords: (kw.secondaryKeywords || []).join(', '),\n    lsiKeywords:       (kw.lsiKeywords       || []).join(', '),\n    metaTitle:         kw.metaTitle         || formData.topic,\n    metaDescription:   kw.metaDescription   || '',\n    suggestedH2s:      (kw.suggestedH2s      || []).join(' | '),\n    hookQuestion:      kw.hookQuestion       || '',\n    tipBoxText:        kw.tipBoxText         || ''\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4540,
+        2000
+      ],
+      "id": "ac4e4628-7fc2-4894-9f3a-e664e9af5503",
+      "name": "Parse Keyword"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.item.json;\n// ✅ ADD THIS — Product Reference Link\nconst productRefLink =\n  d.refLink ||\n  d.productRefLink ||\n  $input.first().json['Product Reference Link (Optional)'] ||\n  $input.first().json.body?.['Product Reference Link (Optional)'] ||\n  '';\nconst tableInstruction = d.needTable === 'Yes'\n  ? 'MUST include at least one properly formatted markdown comparison table.'\n  : 'Do NOT include any tables.';\nconst tldrInstruction = d.needTldr === 'Yes'\n  ? 'MUST include a TL;DR section immediately after the meta description line, formatted as: TL;DR: [2-3 sentence summary]'\n  : 'Do NOT include a TL;DR section.';\nconst faqInstruction = `CONCLUSION THEN FAQS RULE:\n1. Write ## Conclusion BEFORE FAQs.\n2. Write exactly ${d.faqCount} FAQs after conclusion.\nFAQ CRITICAL RULES:\n- At least 2 out of ${d.faqCount} FAQs MUST naturally mention the brand name \"${d.brand}\" in the answer.\n  Example: \"At ${d.brand}, we recommend...\" or \"${d.brand} offers...\" or \"Our team at ${d.brand} suggests...\"\n- Every FAQ answer MUST reflect the user's chosen writing style: ${d.styleName}\n- FAQ answers MUST align with the target audience: ${d.targetOrigin || 'Global'} audience, ${d.targetGender || 'All'} gender, age group ${d.targetAge || 'All Ages'}\n- Use the tone and vocabulary from the brand story context: \"${d.shortBrandStory ? d.shortBrandStory.substring(0, 120) : 'the brand'}\"\n- FAQ style: ${d.faqStyle}\nFAQ format:\nQ1. Question here\nAnswer here (no blank line between Q and A)\nQ2. Next question\nNext answer`;\nconst refStyleSection = d.refStyleInjection && d.refStyleInjection.trim() !== ''\n  ? `\\n${d.refStyleInjection}\\n`\n  : '';\nconst audienceSection = `\nTARGET AUDIENCE PROFILE — Write specifically for this audience:\n- Target Origin/Location: ${d.targetOrigin || 'Global'}\n- Target Gender: ${d.targetGender || 'All'}\n- Target Age Group: ${d.targetAge || 'All Ages'}\n- Product Category: ${d.productCategory || 'General'}\nADAPT the writing style, cultural references, examples, and product mentions to resonate specifically with this audience profile. If the origin is a specific country, use relevant local references, currency, and examples where appropriate.`;\nconst brandStorySection = d.shortBrandStory && d.shortBrandStory.trim() !== ''\n  ? `\nBRAND STORY CONTEXT — Use this to add authenticity and brand voice:\n${d.shortBrandStory}\nWeave the brand story naturally into the introduction or a dedicated brand section. Use it to build trust and emotional connection with the reader.`\n  : '';\n\n// ✅ additionalPrompt section — user ki extra instructions blog mein use hongi\nconst additionalPromptSection = d.additionalPrompt && d.additionalPrompt.trim() !== ''\n  ? `\nADDITIONAL INSTRUCTIONS FROM USER (MUST FOLLOW):\n${d.additionalPrompt}`\n  : '';\n\nconst blogPrompt = `Write a complete, professional blog post with these exact specifications:\nCORE DETAILS\nTopic: ${d.topic}\nBrand Name: ${d.brand}\nPrimary Keyword: ${d.primaryKeyword}\nSecondary Keywords: ${d.secondaryKeywords}\nLSI Keywords: ${d.lsiKeywords}\nOpening Hook Question: ${d.hookQuestion}\nSuggested Section Headings: ${d.suggestedH2s}\nMeta Title: ${d.metaTitle}\nMeta Description: ${d.metaDescription}\nTarget Word Count: ${d.wordCount} words\nLanguage: ${d.language}\n${audienceSection}\n${brandStorySection}\nBLOG FORMAT: ${d.blogFormat}\n${d.formatInstruction}\nWRITING STYLE: ${d.styleName}\n${d.toneGuide}\nSTRUCTURE REQUIREMENTS\n${d.structureGuide}\nKEYWORD PLACEMENT RULES\n${d.keywordStrategy}\n${refStyleSection}\nFORMATTING RULES\n- Start with: # [Blog Title]\n- Next line: Meta Title: ${d.metaTitle}\n- Next line: Meta Description: ${d.metaDescription}\n- ${tldrInstruction}\n- Use ## for H2, ### for H3\n- Use **bold** for important terms\n- Use - for bullet points\n- ${tableInstruction}\n- ${faqInstruction}\n- After FAQs: Tip: [practical tip]\n- Final line: CTA: ${d.ctaText}\n- Write ONLY blog content\n${additionalPromptSection}`;\n\nreturn { json: { ...d, blogPrompt, productRefLink } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4800,
+        2000
+      ],
+      "id": "2d550f3a-a7b5-4444-b21e-3d388e849a9f",
+      "name": "Build prompt"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.blogPrompt }}",
+        "options": {
+          "systemMessage": "=const blogMarkdown = $input.item.json.output || '';\nconst d            = $('Build prompt').item.json;\nconst productRefLink = d.productRefLink || $input.first().json.body?.['Product Reference Link (Optional)'] || '';\n\nconst date = new Date().toLocaleDateString('en-GB', { year:'numeric', month:'long', day:'numeric' });\n\nconst themes = {\n  'Spiritual & Healing': { primary: '#6b4f8e', accent: '#c9a96e', bg: '#faf8fc', heading: '#3d2b5e', border: '#e8dff5' },\n  'Luxury Editorial':    { primary: '#1a1a1a', accent: '#c9a655', bg: '#fdfcf8', heading: '#0d0d0d', border: '#e8e0cc' },\n  'Technical Expert':    { primary: '#0052cc', accent: '#ff5630', bg: '#f8f9ff', heading: '#172b4d', border: '#dde4f0' },\n  'Conversational Smart':{ primary: '#0a7569', accent: '#e85d04', bg: '#f8fffd', heading: '#064e3b', border: '#d1fae5' }\n};\n\nconst t = themes[d.styleName] || themes['Technical Expert'];\n\n// ══════════════════════════════════════════════════════════════\n// STEP 1: <a> tags extract karke safe tokens mein rakh do\n// ══════════════════════════════════════════════════════════════\nconst anchorStore = [];\nlet safe = blogMarkdown.replace(/<a[\\s\\S]*?<\\/a>/gi, (match) => {\n  const cleaned = match\n    .replace(/>[\"'\"\"](.+?)[\"'\"\"]\\s*<\\/a>/gi, '>$1</a>')\n    .replace(/>[\"'\"\"](.+?)<\\/a>/gi, '>$1</a>')\n    .replace(/>(.+?)[\"'\"\"]\\s*<\\/a>/gi, '>$1</a>');\n  const i = anchorStore.length;\n  anchorStore.push(cleaned);\n  return `ANCHORTOKEN${i}ENDTOKEN`;\n});\n\n// ══════════════════════════════════════════════════════════════\n// STEP 2: Baaki markdown clean karo\n// ══════════════════════════════════════════════════════════════\nsafe = safe\n  .replace(/(?<!(^|\\n)#{1,6} ?)#(?![#\\s])/gm, '')\n  .replace(/\"{3,}/g, '')\n  .replace(/\\u201C|\\u201D|\\u2018|\\u2019/g, '')\n  .replace(/\\$(?!\\d)/g, '')\n  .replace(/(?<!\\w)`(?!\\w)/g, '')\n  .replace(/&(?!amp;|lt;|gt;|nbsp;|quot;|#\\d+;)/g, 'and');\n\n// ══════════════════════════════════════════════════════════════\n// STEP 3: Markdown → HTML\n// ══════════════════════════════════════════════════════════════\nfunction mdToHtml(md) {\n  return md\n    .replace(/^# (.+)$/gm,    '<h1>$1</h1>')\n    .replace(/^## (.+)$/gm,   '<h2>$1</h2>')\n    .replace(/^### (.+)$/gm,  '<h3>$1</h3>')\n    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')\n    .replace(/\\*\\*\\*(.+?)\\*\\*\\*/g, '<strong><em>$1</em></strong>')\n    .replace(/\\*\\*(.+?)\\*\\*/g,     '<strong>$1</strong>')\n    .replace(/\\*(.+?)\\*/g,         '<em>$1</em>')\n    .replace(/^(Q\\d+\\.\\s.+)$/gm,  '<div class=\"faq-question\">$1</div>')\n    .replace(/^\\|(.+)\\|$/gm, row => {\n      const cells = row.split('|').filter(c => c.trim());\n      if (cells.every(c => /^[-:| ]+$/.test(c.trim()))) return '';\n      return '<tr>' + cells.map((c, i) =>\n        i === 0 && cells[0].trim().match(/^[A-Z]/)\n          ? `<th>${c.trim()}</th>`\n          : `<td>${c.trim()}</td>`\n      ).join('') + '</tr>';\n    })\n    .replace(/(<tr>[\\s\\S]*?<\\/tr>\\n?)+/g, m => `<table>${m}</table>`)\n    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')\n    .replace(/(<li>[\\s\\S]*?<\\/li>\\n?)+/g, m => `<ul>${m}</ul>`)\n    .replace(/^Tip: (.+)$/gm,   '<div class=\"tip-box\">&#128161; <strong>Tip:</strong> $1</div>')\n    .replace(/^CTA: (.+)$/gm,   '<div class=\"cta-box\"><a class=\"cta-btn\">$1</a></div>')\n    .replace(/^TL;DR: (.+)$/gm, '<div class=\"tldr-box\"><strong>TL;DR:</strong> $1</div>')\n    .replace(/^Meta Title:.+$/gm, '')\n    .replace(/^Meta Description:.+$/gm, '')\n    .replace(/\\n{2,}/g, '</p>\\n<p>')\n    .replace(/<p>\\s*(<[hut])/g, '$1')\n    .replace(/(<\\/h\\d>|<\\/ul>|<\\/table>|<\\/div>)\\s*<\\/p>/g, '$1');\n}\n\n// ══════════════════════════════════════════════════════════════\n// STEP 4: FAQ processor\n// ══════════════════════════════════════════════════════════════\nfunction processFAQs(html) {\n  const lines = html.split('\\n');\n  const out = [];\n  let i = 0;\n  while (i < lines.length) {\n    if (lines[i].includes('class=\"faq-question\"')) {\n      let j = i + 1;\n      while (j < lines.length && !lines[j].trim()) j++;\n      if (j < lines.length) {\n        const ans = lines[j].replace(/^<p>/, '').replace(/<\\/p>$/, '');\n        out.push(`<div class=\"faq-item\">${lines[i]}<div class=\"faq-answer\">${ans}</div></div>`);\n        i = j + 1;\n        continue;\n      }\n    }\n    out.push(lines[i]);\n    i++;\n  }\n  return out.join('\\n');\n}\n\n// ══════════════════════════════════════════════════════════════\n// STEP 5: Convert + anchors wapas restore karo\n// ══════════════════════════════════════════════════════════════\nlet blogHtml = mdToHtml(safe);\nblogHtml = processFAQs(blogHtml);\n\nanchorStore.forEach((anchor, i) => {\n  blogHtml = blogHtml.split(`ANCHORTOKEN${i}ENDTOKEN`).join(anchor);\n});\n\n// ══════════════════════════════════════════════════════════════\n// STEP 6: productRefLink — comma-separated links, har link 1 baar\n//         alag alag word pe lagega, already linked words skip\n// ══════════════════════════════════════════════════════════════\nconst productRefLinks = productRefLink\n  .split(',')\n  .map(l => l.trim())\n  .filter(l => l.length > 3);\n\nif (productRefLinks.length > 0) {\n  const linkCandidates = [\n    d.primaryKeyword,\n    d.brand,\n    d.topic,\n    'learn more', 'read more', 'find out',\n    'discover', 'explore', 'check out', 'visit', 'see more'\n  ].filter(w => w && w.trim().length > 3);\n\n  const usedWords = new Set();\n\n  for (const linkUrl of productRefLinks) {\n    let linked = false;\n\n    for (const word of linkCandidates) {\n      if (linked) break;\n      if (usedWords.has(word.toLowerCase())) continue;\n\n      const escaped = word.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n      const regex = new RegExp(`(?<![\">])(${escaped})(?![^<]*>|[^<>]*<\\\\/a>)`, 'i');\n\n      blogHtml = blogHtml.replace(regex, (match) => {\n        linked = true;\n        usedWords.add(word.toLowerCase());\n        return `<a href=\"${linkUrl}\" target=\"_blank\" rel=\"noopener\" style=\"color:#e85d04;font-weight:bold;text-decoration:underline;\">${match}</a>`;\n      });\n    }\n  }\n}\n\n// ══════════════════════════════════════════════════════════════\n// STEP 7: HTML document\n// ══════════════════════════════════════════════════════════════\nconst refBadge = d.refLink && d.refLink.trim()\n  ? `<div class=\"ref-badge\">&#128279; <strong>Style Reference:</strong> <a href=\"${d.refLink}\" target=\"_blank\">${d.refLink}</a></div>`\n  : '';\n\nconst htmlDoc = `<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<title>${d.metaTitle}</title>\n<meta name=\"description\" content=\"${d.metaDescription}\">\n<style>\n  * { box-sizing: border-box; margin: 0; padding: 0; }\n  body { font-family: 'Georgia', 'Cambria', serif; font-size: 11.5pt; line-height: 1.8; color: #1a1a1a; background: ${t.bg}; max-width: 820px; margin: 0 auto; padding: 50px 48px; }\n  .meta-box { background: white; border: 1px solid ${t.border}; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; font-size: 9.5pt; font-family: 'Arial', sans-serif; color: #555; }\n  .meta-box strong { color: ${t.primary}; }\n  .meta-box .style-badge { display: inline-block; background: ${t.primary}; color: white; padding: 2px 10px; border-radius: 12px; font-size: 8.5pt; margin-bottom: 8px; }\n  .audience-box { background: white; border: 1px solid ${t.border}; border-radius: 8px; padding: 12px 20px; margin-bottom: 16px; font-size: 9pt; font-family: 'Arial', sans-serif; color: #555; }\n  .audience-box strong { color: ${t.primary}; }\n  .ref-badge { background: #fffbea; border: 1px solid #f0d060; border-radius: 8px; padding: 10px 16px; margin-bottom: 28px; font-size: 9pt; font-family: 'Arial', sans-serif; color: #6b5000; }\n  .ref-badge a { color: #0052cc; word-break: break-all; }\n  h1 { font-size: 22pt; font-weight: bold; color: ${t.heading}; border-bottom: 3px solid ${t.primary}; padding-bottom: 14px; margin-bottom: 24px; line-height: 1.3; }\n  h2 { font-size: 15pt; font-weight: bold; color: ${t.primary}; margin-top: 36px; margin-bottom: 12px; padding-left: 14px; border-left: 4px solid ${t.accent}; }\n  h3 { font-size: 12.5pt; font-weight: bold; color: ${t.heading}; margin-top: 22px; margin-bottom: 8px; }\n  h4 { font-size: 11.5pt; font-weight: bold; color: #444; margin-top: 16px; }\n  p { margin: 10px 0; text-align: justify; }\n  ul { padding-left: 26px; margin: 12px 0; }\n  li { margin: 6px 0; }\n  table { width: 100%; border-collapse: collapse; margin: 22px 0; font-size: 10.5pt; font-family: 'Arial', sans-serif; }\n  th { background: ${t.primary}; color: white; padding: 11px 16px; text-align: left; font-weight: bold; }\n  td { padding: 10px 16px; border: 1px solid ${t.border}; }\n  tr:nth-child(even) td { background: rgba(0,0,0,0.025); }\n  .tldr-box { background: white; border-left: 4px solid ${t.accent}; padding: 14px 18px; margin: 20px 0 30px; font-style: italic; color: #333; border-radius: 0 6px 6px 0; }\n  .tip-box { background: white; border: 1px dashed ${t.accent}; border-radius: 8px; padding: 16px 20px; margin: 30px 0 16px; font-family: 'Arial', sans-serif; font-size: 10.5pt; color: #444; }\n  .cta-box { text-align: center; margin: 30px 0 20px; }\n  .cta-btn { display: inline-block; background: ${t.primary}; color: white; padding: 13px 36px; border-radius: 6px; font-family: 'Arial', sans-serif; font-weight: bold; font-size: 12pt; text-decoration: none; cursor: pointer; }\n  .faq-item { margin: 20px 0; border-left: 3px solid ${t.accent}; padding-left: 16px; }\n  .faq-question { font-weight: bold; color: ${t.heading}; font-size: 11.5pt; margin-bottom: 6px; }\n  .faq-answer { color: #333; font-size: 11pt; line-height: 1.7; }\n  strong { color: ${t.heading}; }\n  a { color: #e85d04; text-decoration: underline; font-weight: bold; }\n  a:hover { color: #bf4500; text-decoration: underline; }\n  .footer { margin-top: 50px; padding-top: 16px; border-top: 1px solid ${t.border}; text-align: center; font-size: 9pt; font-family: 'Arial', sans-serif; color: #999; }\n</style>\n</head>\n<body>\n<div class=\"meta-box\">\n  <div class=\"style-badge\">${d.styleName}</div><br>\n  <strong>Meta Title:</strong> ${d.metaTitle}<br>\n  <strong>Meta Description:</strong> ${d.metaDescription}<br>\n  <strong>Primary Keyword:</strong> ${d.primaryKeyword}<br>\n  <strong>Secondary Keywords:</strong> ${d.secondaryKeywords}<br>\n  <strong>Brand:</strong> ${d.brand} &nbsp;|&nbsp; <strong>Words:</strong> ${d.wordCount} &nbsp;|&nbsp; ${date}\n</div>\n<div class=\"audience-box\">\n  <strong>Target Audience:</strong> ${d.targetOrigin || 'Global'} &nbsp;|&nbsp;\n  <strong>Gender:</strong> ${d.targetGender || 'All'} &nbsp;|&nbsp;\n  <strong>Age:</strong> ${d.targetAge || 'All Ages'} &nbsp;|&nbsp;\n  <strong>Category:</strong> ${d.productCategory || 'General'}\n</div>\n${refBadge}\n<div class=\"blog-body\">${blogHtml}</div>\n<div class=\"footer\">Generated by AI Blog Writer &middot; ${d.brand} &middot; ${date}</div>\n</body>\n</html>`;\n\nconst base64   = Buffer.from(htmlDoc, 'utf8').toString('base64');\nconst safeName = d.topic.replace(/[^a-zA-Z0-9\\s]/g, '').replace(/\\s+/g, '_').substring(0, 40);\nconst fileName = `${d.styleName.split(' ')[0]}_Blog_${safeName}_${Date.now()}.html`;\n\nreturn {\n  json: { topic: d.topic, metaTitle: d.metaTitle, styleName: d.styleName, brand: d.brand, fileName },\n  binary: {\n    blogFile: { data: base64, mimeType: 'text/html', fileName, fileExtension: 'html' }\n  }\n};"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        5020,
+        2000
+      ],
+      "id": "eb8e3ccb-af39-4f0c-a30d-483855381b62",
+      "name": "Blog Writer",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "executeOnce": false,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite-preview",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        5020,
+        2220
+      ],
+      "id": "63ac1aac-b8ad-428d-b5ac-52312b70eae4",
+      "name": "AI Blog Writer",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "qYBvguSOc70NxboJ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const blogMarkdown = $input.item.json.output || '';\nconst d            = $('Build prompt').item.json;\nconst productRefLink = d.productRefLink || $input.first().json.body?.['Product Reference Link (Optional)'] || '';\n\nconst date = new Date().toLocaleDateString('en-GB', { year:'numeric', month:'long', day:'numeric' });\n\nconst themes = {\n  'Spiritual & Healing': { primary: '#6b4f8e', accent: '#c9a96e', bg: '#faf8fc', heading: '#3d2b5e', border: '#e8dff5' },\n  'Luxury Editorial':    { primary: '#1a1a1a', accent: '#c9a655', bg: '#fdfcf8', heading: '#0d0d0d', border: '#e8e0cc' },\n  'Technical Expert':    { primary: '#0052cc', accent: '#ff5630', bg: '#f8f9ff', heading: '#172b4d', border: '#dde4f0' },\n  'Conversational Smart':{ primary: '#0a7569', accent: '#e85d04', bg: '#f8fffd', heading: '#064e3b', border: '#d1fae5' }\n};\n\nconst t = themes[d.styleName] || themes['Technical Expert'];\n\n// ══════════════════════════════════════════════════════════════\n// STEP 1: <a> tags extract karke safe tokens mein rakh do\n// ══════════════════════════════════════════════════════════════\nconst anchorStore = [];\nlet safe = blogMarkdown.replace(/<a[\\s\\S]*?<\\/a>/gi, (match) => {\n  const cleaned = match\n    .replace(/>[\"'\"\"](.+?)[\"'\"\"]\\s*<\\/a>/gi, '>$1</a>')\n    .replace(/>[\"'\"\"](.+?)<\\/a>/gi, '>$1</a>')\n    .replace(/>(.+?)[\"'\"\"]\\s*<\\/a>/gi, '>$1</a>');\n  const i = anchorStore.length;\n  anchorStore.push(cleaned);\n  return `ANCHORTOKEN${i}ENDTOKEN`;\n});\n\n// ══════════════════════════════════════════════════════════════\n// STEP 2: Markdown clean karo\n// ══════════════════════════════════════════════════════════════\nsafe = safe\n  .replace(/(?<!(^|\\n)#{1,6} ?)#(?![#\\s])/gm, '')\n  .replace(/\"{3,}/g, '')\n  .replace(/\\u201C|\\u201D|\\u2018|\\u2019/g, '')\n  .replace(/\\$(?!\\d)/g, '')\n  .replace(/(?<!\\w)`(?!\\w)/g, '')\n  .replace(/&(?!amp;|lt;|gt;|nbsp;|quot;|#\\d+;)/g, 'and')\n  .replace(/\\s*—\\s*/g, ', ');\n\n// ══════════════════════════════════════════════════════════════\n// STEP 3: Markdown → HTML\n// ══════════════════════════════════════════════════════════════\nfunction mdToHtml(md) {\n  return md\n    .replace(/^# (.+)$/gm,    '<h1>$1</h1>')\n    .replace(/^## (.+)$/gm,   '<h2>$1</h2>')\n    .replace(/^### (.+)$/gm,  '<h3>$1</h3>')\n    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')\n    .replace(/\\*\\*\\*(.+?)\\*\\*\\*/g, '<strong><em>$1</em></strong>')\n    .replace(/\\*\\*(.+?)\\*\\*/g,     '<strong>$1</strong>')\n    .replace(/\\*(.+?)\\*/g,         '<em>$1</em>')\n    .replace(/^(Q\\d+\\.\\s.+)$/gm,  '<div class=\"faq-question\">$1</div>')\n    .replace(/^\\|(.+)\\|$/gm, row => {\n      const cells = row.split('|').filter(c => c.trim());\n      if (cells.every(c => /^[-:| ]+$/.test(c.trim()))) return 'TBLSEP';\n      return `<tr data-row>${cells.map(c => `<td>${c.trim()}</td>`).join('')}</tr>`;\n    })\n    .replace(/TBLSEP\\n?/g, '')\n    .replace(/(<tr data-row>[\\s\\S]*?<\\/tr>\\n?)+/g, m => {\n      let isFirst = true;\n      const rows = m.replace(/<tr data-row>([\\s\\S]*?)<\\/tr>/g, (_, inner) => {\n        if (isFirst) {\n          isFirst = false;\n          const headerCells = inner.replace(/<td>([\\s\\S]*?)<\\/td>/g, '<th>$1</th>');\n          return `<tr>${headerCells}</tr>`;\n        }\n        return `<tr>${inner}</tr>`;\n      });\n      return `<table>${rows}</table>`;\n    })\n    .replace(/<\\/table>\\s*<table>/g, '')\n    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')\n    .replace(/(<li>[\\s\\S]*?<\\/li>\\n?)+/g, m => `<ul>${m}</ul>`)\n    .replace(/^Tip: (.+)$/gm,   '<div class=\"tip-box\">&#128161; <strong>Tip:</strong> $1</div>')\n    .replace(/^CTA: (.+)$/gm,   '<div class=\"cta-box\"><a class=\"cta-btn\">$1</a></div>')\n    .replace(/^TL;DR: (.+)$/gm, '<div class=\"tldr-box\"><strong>TL;DR:</strong> $1</div>')\n    .replace(/^Meta Title:.+$/gm, '')\n    .replace(/^Meta Description:.+$/gm, '')\n    .replace(/\\n{2,}/g, '</p>\\n<p>')\n    .replace(/<p>\\s*(<[hut])/g, '$1')\n    .replace(/(<\\/h\\d>|<\\/ul>|<\\/table>|<\\/div>)\\s*<\\/p>/g, '$1');\n}\n\n// ══════════════════════════════════════════════════════════════\n// STEP 4: FAQ processor\n// ══════════════════════════════════════════════════════════════\nfunction processFAQs(html) {\n  const lines = html.split('\\n');\n  const out = [];\n  let i = 0;\n  while (i < lines.length) {\n    if (lines[i].includes('class=\"faq-question\"')) {\n      let j = i + 1;\n      while (j < lines.length && !lines[j].trim()) j++;\n      if (j < lines.length) {\n        const ans = lines[j].replace(/^<p>/, '').replace(/<\\/p>$/, '');\n        out.push(`<div class=\"faq-item\">${lines[i]}<div class=\"faq-answer\">${ans}</div></div>`);\n        i = j + 1;\n        continue;\n      }\n    }\n    out.push(lines[i]);\n    i++;\n  }\n  return out.join('\\n');\n}\n\n// ══════════════════════════════════════════════════════════════\n// STEP 5: Convert + anchors wapas restore karo\n// ══════════════════════════════════════════════════════════════\nlet blogHtml = mdToHtml(safe);\nblogHtml = processFAQs(blogHtml);\n\nanchorStore.forEach((anchor, i) => {\n  blogHtml = blogHtml.split(`ANCHORTOKEN${i}ENDTOKEN`).join(anchor);\n});\n\n// ══════════════════════════════════════════════════════════════\n// STEP 6: productRefLink — sirf body paragraphs mein lagao\n//         h1, tldr, faq, tip, cta, meta, audience, footer — sab protected\n// ══════════════════════════════════════════════════════════════\nconst productRefLinks = productRefLink\n  .split(',')\n  .map(l => l.trim())\n  .filter(l => l.length > 3);\n\nif (productRefLinks.length > 0) {\n  const linkCandidates = [\n    d.primaryKeyword,\n    d.brand,\n    d.topic,\n    'learn more', 'read more', 'find out',\n    'discover', 'explore', 'check out', 'visit', 'see more'\n  ].filter(w => w && w.trim().length > 3);\n\n  const usedWords = new Set();\n\n  for (const linkUrl of productRefLinks) {\n    let linked = false;\n\n    // ✅ Protect: h1, tldr-box, tip-box, cta-box, faq-item, meta-box, audience-box, ref-badge, footer\n    const protectedBlocks = [];\n    let protectedHtml = blogHtml.replace(\n      /(<h1>[\\s\\S]*?<\\/h1>|<div class=\"tldr-box\">[\\s\\S]*?<\\/div>|<div class=\"tip-box\">[\\s\\S]*?<\\/div>|<div class=\"cta-box\">[\\s\\S]*?<\\/div>|<div class=\"faq-item\">[\\s\\S]*?<\\/div>|<div class=\"meta-box\">[\\s\\S]*?<\\/div>|<div class=\"audience-box\">[\\s\\S]*?<\\/div>|<div class=\"ref-badge\">[\\s\\S]*?<\\/div>|<div class=\"footer\">[\\s\\S]*?<\\/div>)/gi,\n      (match) => {\n        const idx = protectedBlocks.length;\n        protectedBlocks.push(match);\n        return `__PROTECTED_BLOCK_${idx}__`;\n      }\n    );\n\n    for (const word of linkCandidates) {\n      if (linked) break;\n      if (usedWords.has(word.toLowerCase())) continue;\n\n      const escaped = word.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n      const regex = new RegExp(`(?<![\">])(${escaped})(?![^<]*>|[^<>]*<\\\\/a>)`, 'i');\n\n      protectedHtml = protectedHtml.replace(regex, (match) => {\n        linked = true;\n        usedWords.add(word.toLowerCase());\n        return `<a href=\"${linkUrl}\" target=\"_blank\" rel=\"noopener\" style=\"color:#e85d04;font-weight:bold;text-decoration:underline;\">${match}</a>`;\n      });\n    }\n\n    // ✅ Protected blocks wapas restore karo\n    protectedBlocks.forEach((block, idx) => {\n      protectedHtml = protectedHtml.split(`__PROTECTED_BLOCK_${idx}__`).join(block);\n    });\n\n    blogHtml = protectedHtml;\n  }\n}\n\n// ══════════════════════════════════════════════════════════════\n// STEP 7: HTML document\n// ══════════════════════════════════════════════════════════════\nconst refBadge = d.refLink && d.refLink.trim()\n  ? `<div class=\"ref-badge\">&#128279; <strong>Style Reference:</strong> <a href=\"${d.refLink}\" target=\"_blank\">${d.refLink}</a></div>`\n  : '';\n\nconst htmlDoc = `<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<title>${d.metaTitle}</title>\n<meta name=\"description\" content=\"${d.metaDescription}\">\n<style>\n  * { box-sizing: border-box; margin: 0; padding: 0; }\n  body { font-family: 'Georgia', 'Cambria', serif; font-size: 11.5pt; line-height: 1.8; color: #1a1a1a; background: ${t.bg}; max-width: 820px; margin: 0 auto; padding: 50px 48px; }\n  .meta-box { background: white; border: 1px solid ${t.border}; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; font-size: 9.5pt; font-family: 'Arial', sans-serif; color: #555; }\n  .meta-box strong { color: ${t.primary}; }\n  .meta-box .style-badge { display: inline-block; background: ${t.primary}; color: white; padding: 2px 10px; border-radius: 12px; font-size: 8.5pt; margin-bottom: 8px; }\n  .audience-box { background: white; border: 1px solid ${t.border}; border-radius: 8px; padding: 12px 20px; margin-bottom: 16px; font-size: 9pt; font-family: 'Arial', sans-serif; color: #555; }\n  .audience-box strong { color: ${t.primary}; }\n  .ref-badge { background: #fffbea; border: 1px solid #f0d060; border-radius: 8px; padding: 10px 16px; margin-bottom: 28px; font-size: 9pt; font-family: 'Arial', sans-serif; color: #6b5000; }\n  .ref-badge a { color: #0052cc; word-break: break-all; }\n  h1 { font-size: 22pt; font-weight: bold; color: ${t.heading}; border-bottom: 3px solid ${t.primary}; padding-bottom: 14px; margin-bottom: 24px; line-height: 1.3; }\n  h2 { font-size: 15pt; font-weight: bold; color: ${t.primary}; margin-top: 36px; margin-bottom: 12px; padding-left: 14px; border-left: 4px solid ${t.accent}; }\n  h3 { font-size: 12.5pt; font-weight: bold; color: ${t.heading}; margin-top: 22px; margin-bottom: 8px; }\n  h4 { font-size: 11.5pt; font-weight: bold; color: #444; margin-top: 16px; }\n  p { margin: 10px 0; text-align: justify; }\n  ul { padding-left: 26px; margin: 12px 0; }\n  li { margin: 6px 0; }\n  table { width: 100%; border-collapse: collapse; margin: 22px 0; font-size: 10.5pt; font-family: 'Arial', sans-serif; }\n  th { background: ${t.primary}; color: white; padding: 11px 16px; text-align: left; font-weight: bold; }\n  td { padding: 10px 16px; border: 1px solid ${t.border}; }\n  tr:nth-child(even) td { background: rgba(0,0,0,0.025); }\n  .tldr-box { background: white; border-left: 4px solid ${t.accent}; padding: 14px 18px; margin: 20px 0 30px; font-style: italic; color: #333; border-radius: 0 6px 6px 0; }\n  .tip-box { background: white; border: 1px dashed ${t.accent}; border-radius: 8px; padding: 16px 20px; margin: 30px 0 16px; font-family: 'Arial', sans-serif; font-size: 10.5pt; color: #444; }\n  .cta-box { text-align: center; margin: 30px 0 20px; }\n  .cta-btn { display: inline-block; background: ${t.primary}; color: white; padding: 13px 36px; border-radius: 6px; font-family: 'Arial', sans-serif; font-weight: bold; font-size: 12pt; text-decoration: none; cursor: pointer; }\n  .faq-item { margin: 20px 0; border-left: 3px solid ${t.accent}; padding-left: 16px; }\n  .faq-question { font-weight: bold; color: ${t.heading}; font-size: 11.5pt; margin-bottom: 6px; }\n  .faq-answer { color: #333; font-size: 11pt; line-height: 1.7; }\n  strong { color: ${t.heading}; }\n  a { color: #e85d04; text-decoration: underline; font-weight: bold; }\n  a:hover { color: #bf4500; text-decoration: underline; }\n  .footer { margin-top: 50px; padding-top: 16px; border-top: 1px solid ${t.border}; text-align: center; font-size: 9pt; font-family: 'Arial', sans-serif; color: #999; }\n</style>\n</head>\n<body>\n<div class=\"meta-box\">\n  <div class=\"style-badge\">${d.styleName}</div><br>\n  <strong>Meta Title:</strong> ${d.metaTitle}<br>\n  <strong>Meta Description:</strong> ${d.metaDescription}<br>\n  <strong>Primary Keyword:</strong> ${d.primaryKeyword}<br>\n  <strong>Secondary Keywords:</strong> ${d.secondaryKeywords}<br>\n  <strong>Brand:</strong> ${d.brand} &nbsp;|&nbsp; <strong>Words:</strong> ${d.wordCount} &nbsp;|&nbsp; ${date}\n</div>\n<div class=\"audience-box\">\n  <strong>Target Audience:</strong> ${d.targetOrigin || 'Global'} &nbsp;|&nbsp;\n  <strong>Gender:</strong> ${d.targetGender || 'All'} &nbsp;|&nbsp;\n  <strong>Age:</strong> ${d.targetAge || 'All Ages'} &nbsp;|&nbsp;\n  <strong>Category:</strong> ${d.productCategory || 'General'}\n</div>\n${refBadge}\n<div class=\"blog-body\">${blogHtml}</div>\n<div class=\"footer\">Generated by AI Blog Writer &middot; ${d.brand} &middot; ${date}</div>\n</body>\n</html>`;\n\nconst base64   = Buffer.from(htmlDoc, 'utf8').toString('base64');\nconst safeName = d.topic.replace(/[^a-zA-Z0-9\\s]/g, '').replace(/\\s+/g, '_').substring(0, 40);\nconst fileName = `${d.styleName.split(' ')[0]}_Blog_${safeName}_${Date.now()}.html`;\n\nreturn {\n  json: { topic: d.topic, metaTitle: d.metaTitle, styleName: d.styleName, brand: d.brand, fileName, productRefLink },\n  binary: {\n    blogFile: { data: base64, mimeType: 'text/html', fileName, fileExtension: 'html' }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5340,
+        2000
+      ],
+      "id": "edcbeb89-0b42-4608-8e23-4c54a87694d6",
+      "name": "Results"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.blocked }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              },
+              "id": "block-check-001"
+            },
+            {
+              "id": "625087f3-51b1-411b-96a1-4e233164ce51",
+              "leftValue": "={{ $json.body.blocked }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.1,
+      "position": [
+        5300,
+        1520
+      ],
+      "id": "4a55af78-76f2-4a24-9115-023e9e8c333d",
+      "name": "Is Blocked?",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<html><body><h2>Already processing your request. Please wait...</h2></body></html>",
+        "options": {
+          "responseCode": 429,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        5560,
+        1500
+      ],
+      "id": "f3736839-a54f-4dec-9a2a-f308bd07cfa1",
+      "name": "Respond Blocked",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "Role: Professionally trained to write high-ranking SEO blogs.\n\n⚠️ STRICT RULE: Do not touch or modify any nodes without permission.",
+        "height": 140,
+        "width": 380
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4840,
+        1560
+      ],
+      "typeVersion": 1,
+      "id": "7e2ad29f-726b-4ed0-aac4-101c3dd7e6e9",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ✅ BLOCKING LOGIC\nconst staticData = $getWorkflowStaticData('global');\nif (staticData.isProcessing) {\n  return [{ json: { blocked: true } }];\n}\nstaticData.isProcessing = true;\n\n// ✅ .json.body → .json (Form Trigger fix)\nconst topic        = $input.first().json['Blog Topic']                          || '';\nconst styleRaw     = $input.first().json['Writing Style']                        || '';\nconst brand        = $input.first().json['Brand / Business Name']                || '';\nconst language     = $input.first().json['Language']                             || '';\nconst wordCount    = $input.first().json['Word Count']                           || '';\nconst needTable    = $input.first().json['Include Comparison Table?']            || '';\nconst needTldr     = $input.first().json['Include TL;DR Summary?']               || '';\nconst faqCount     = $input.first().json['Number of FAQs']                       || '';\nconst ctaText      = $input.first().json['Call to Action Text']                  || '';\nconst userKeywords = $input.first().json['Keywords (Optional)']                  || '';\nconst blogFormat   = $input.first().json['Blog Format']                          || '';\nconst refLink      = ($input.first().json['Reference Website Link (Optional)']   || '').trim();\n\nconst shortBrandStory = $input.first().json['Short Brand Story'] || '';\nconst productCategory = $input.first().json['Product Category']  || '';\nconst targetOrigin    = $input.first().json['Target Origin']      || '';\nconst targetGender    = $input.first().json['Target Gender']      || '';\nconst targetAge       = $input.first().json['Target Age Group']   || '';\n\n// ================= STYLE LOGIC =================\nconst isSpiritual = styleRaw.includes('Spiritual');\nconst isLuxury    = styleRaw.includes('Luxury');\nconst isTechnical = styleRaw.includes('Technical');\n\nlet styleName, toneGuide, structureGuide, keywordStrategy, faqStyle;\n\nif (isSpiritual) {\n  styleName = 'Spiritual & Healing';\n  toneGuide = `\\n- Write in a poetic, warm tone\\n- Brand Story Context: ${shortBrandStory}`;\n  structureGuide = `Conclusion before FAQs`;\n  keywordStrategy = `Natural keyword flow`;\n  faqStyle = 'gentle answers';\n} else if (isLuxury) {\n  styleName = 'Luxury Editorial';\n  toneGuide = `\\n- High-end editorial tone\\n- Brand Story Context: ${shortBrandStory}`;\n  structureGuide = `Luxury structure`;\n  keywordStrategy = `Premium keywords`;\n  faqStyle = 'luxury answers';\n} else if (isTechnical) {\n  styleName = 'Technical Expert';\n  toneGuide = `\\n- Data-driven tone\\n- Brand Story Context: ${shortBrandStory}`;\n  structureGuide = `Technical breakdown`;\n  keywordStrategy = `SEO + specs`;\n  faqStyle = 'technical answers';\n} else {\n  styleName = 'Conversational Smart';\n  toneGuide = `\\n- Friendly expert tone\\n- Brand Story Context: ${shortBrandStory}`;\n  structureGuide = `Simple readable flow`;\n  keywordStrategy = `Natural usage`;\n  faqStyle = 'helpful answers';\n}\n\n// ================= FORMAT =================\nconst formatGuides = {\n  'Standard Article': 'Write intro, body, conclusion, FAQs',\n  'Listicle': 'Numbered list',\n  'How-To Guide': 'Step-by-step',\n  'Product Review': 'Pros/Cons + verdict',\n  'Ultimate Guide': 'Complete deep guide'\n};\nconst formatInstruction = formatGuides[blogFormat] || formatGuides['Standard Article'];\n\n// ================= RETURN =================\nreturn {\n  json: {\n    blocked: false,\n    topic, styleName, toneGuide, structureGuide, keywordStrategy, faqStyle,\n    brand, language, wordCount, needTable, needTldr, faqCount, ctaText,\n    userKeywords, blogFormat, formatInstruction, refLink,\n    shortBrandStory, productCategory, targetOrigin, targetGender, targetAge\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5060,
+        1320
+      ],
+      "id": "e5bc79a6-a9e8-4e7b-9c94-fc9d8ae88f11",
+      "name": "form Prepare Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const topic        = $input.first().json.body['Blog Topic']                          || '';\nconst styleRaw     = $input.first().json.body['Writing Style']                        || '';\nconst brand        = $input.first().json.body['Brand / Business Name']                || '';\nconst language     = $input.first().json.body['Language']                             || '';\nconst wordCount    = $input.first().json.body['Word Count']                           || '';\nconst needTable    = $input.first().json.body['Include Comparison Table?']            || '';\nconst needTldr     = $input.first().json.body['Include TL;DR Summary?']               || '';\nconst faqCount     = $input.first().json.body['Number of FAQs']                       || '';\nconst ctaText      = $input.first().json.body['Call to Action Text']                  || '';\nconst userKeywords = $input.first().json.body['Keywords (Optional)']                  || '';\nconst blogFormat   = $input.first().json.body['Blog Format']                          || '';\nconst refLink      = ($input.first().json.body['Reference Website Link (Optional)']   || '').trim();\nconst productRefLink = $input.first().json.body['Product Reference Link (Optional)']  || '';\nconst additionalPrompt = $input.first().json.body['Additional Prompt (Optional)']     || '';\n// ✅ NEW FIELDS (ADDED SAME STYLE)\nconst shortBrandStory = $input.first().json.body['Short Brand Story'] || '';\nconst productCategory = $input.first().json.body['Product Category'] || '';\nconst targetOrigin    = $input.first().json.body['Target Origin'] || '';\nconst targetGender    = $input.first().json.body['Target Gender'] || '';\nconst targetAge       = $input.first().json.body['Target Age Group'] || '';\n// ================= STYLE LOGIC =================\nconst isSpiritual = styleRaw.includes('Spiritual');\nconst isLuxury    = styleRaw.includes('Luxury');\nconst isTechnical = styleRaw.includes('Technical');\nlet styleName, toneGuide, structureGuide, keywordStrategy, faqStyle;\nif (isSpiritual) {\n  styleName = 'Spiritual & Healing';\n  toneGuide = `\n- Write in a poetic, warm tone\n- Brand Story Context: ${shortBrandStory}`;\n  \n  structureGuide = `Conclusion before FAQs`;\n  keywordStrategy = `Natural keyword flow`;\n  faqStyle = 'gentle answers';\n} else if (isLuxury) {\n  styleName = 'Luxury Editorial';\n  toneGuide = `\n- High-end editorial tone\n- Brand Story Context: ${shortBrandStory}`;\n  structureGuide = `Luxury structure`;\n  keywordStrategy = `Premium keywords`;\n  faqStyle = 'luxury answers';\n} else if (isTechnical) {\n  styleName = 'Technical Expert';\n  toneGuide = `\n- Data-driven tone\n- Brand Story Context: ${shortBrandStory}`;\n  structureGuide = `Technical breakdown`;\n  keywordStrategy = `SEO + specs`;\n  faqStyle = 'technical answers';\n} else {\n  styleName = 'Conversational Smart';\n  toneGuide = `\n- Friendly expert tone\n- Brand Story Context: ${shortBrandStory}`;\n  structureGuide = `Simple readable flow`;\n  keywordStrategy = `Natural usage`;\n  faqStyle = 'helpful answers';\n}\n// ================= FORMAT =================\nconst formatGuides = {\n  'Standard Article': 'Write intro, body, conclusion, FAQs',\n  'Listicle': 'Numbered list',\n  'How-To Guide': 'Step-by-step',\n  'Product Review': 'Pros/Cons + verdict',\n  'Ultimate Guide': 'Complete deep guide'\n};\nconst formatInstruction = formatGuides[blogFormat] || formatGuides['Standard Article'];\n// ================= RETURN =================\nreturn {\n  json: {\n    topic,\n    styleName,\n    toneGuide,\n    structureGuide,\n    keywordStrategy,\n    faqStyle,\n    brand,\n    language,\n    wordCount,\n    needTable,\n    needTldr,\n    faqCount,\n    ctaText,\n    userKeywords,\n    blogFormat,\n    formatInstruction,\n    refLink,\n    productRefLink,\n    additionalPrompt,\n    // ✅ NEW RETURN VALUES\n    shortBrandStory,\n    productCategory,\n    targetOrigin,\n    targetGender,\n    targetAge\n  }\n}; "
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3660,
+        1180
+      ],
+      "id": "584053fa-b52a-4d56-a995-2bb11e7feb7d",
+      "name": "Prepare Data"
+    },
+    {
+      "parameters": {
+        "formTitle": "AI Blog Writer",
+        "formDescription": "Professional blog generation trained on expert content styles",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Blog Topic",
+              "placeholder": "e.g. Benefits of Solar Energy for Homes",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Short Brand Story",
+              "placeholder": "We started in a small garage in 2010 with a mission to...",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Writing Style",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Spiritual & Healing — Poetic, energetic, short flowing paragraphs with emotional depth"
+                  },
+                  {
+                    "option": "Luxury Editorial — Sophisticated, trend-forward, fashion-influenced, high-end brand voice"
+                  },
+                  {
+                    "option": "Technical Expert — Data-driven, spec-heavy, comparison tables, UK market authority"
+                  },
+                  {
+                    "option": "Conversational Smart — Science-backed, warm, accessible, subtle product integration"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Brand / Business Name",
+              "placeholder": "e.g. Electro City Bikes, Monsoon Flowers",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Blog Format",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Standard Article"
+                  },
+                  {
+                    "option": "Listicle"
+                  },
+                  {
+                    "option": "How-To Guide"
+                  },
+                  {
+                    "option": "Product Review"
+                  },
+                  {
+                    "option": "Ultimate Guide"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Reference Website Link (Optional)",
+              "placeholder": "e.g. https://www.example.com/blog"
+            },
+            {
+              "fieldLabel": "Keywords (Optional)",
+              "placeholder": "e.g. solar panels for home, home solar system"
+            },
+            {
+              "fieldLabel": "Product Category",
+              "placeholder": "Sustainable Fashion, Tech Gadgets, or Skincare"
+            },
+            {
+              "fieldLabel": "Language",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "English"
+                  },
+                  {
+                    "option": "Urdu"
+                  },
+                  {
+                    "option": "Hindi"
+                  },
+                  {
+                    "option": "Arabic"
+                  },
+                  {
+                    "option": "Chinese"
+                  },
+                  {
+                    "option": "Turkish"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Target Origin",
+              "placeholder": "USA, United Kingdom, or Global Audience",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Target Gender",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Male"
+                  },
+                  {
+                    "option": "Female"
+                  },
+                  {
+                    "option": "Non-binary"
+                  },
+                  {
+                    "option": "All "
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Target Age Group",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Juvenile"
+                  },
+                  {
+                    "option": "18-30"
+                  },
+                  {
+                    "option": "31-45"
+                  },
+                  {
+                    "option": "45-60"
+                  },
+                  {
+                    "option": "over 60 years"
+                  },
+                  {
+                    "option": "All Ages"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Word Count",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "800"
+                  },
+                  {
+                    "option": "1200"
+                  },
+                  {
+                    "option": "1500"
+                  },
+                  {
+                    "option": "2000"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Include Comparison Table?",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes"
+                  },
+                  {
+                    "option": "No"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Include TL;DR Summary?",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Yes"
+                  },
+                  {
+                    "option": "No"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Number of FAQs",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "4"
+                  },
+                  {
+                    "option": "6"
+                  },
+                  {
+                    "option": "8"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Call to Action Text",
+              "placeholder": "e.g. Shop Now, Find Your Battery, Explore Collection"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        4880,
+        1320
+      ],
+      "id": "ebfffe1e-f0b3-4758-a621-8829232bbf95",
+      "name": "On form submission",
+      "webhookId": "ae89caad-b3fb-4ff0-b2ef-837762ef71de",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "form-submit",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        3460,
+        1180
+      ],
+      "id": "452b29c9-c37b-48e4-b78e-688b173d880f",
+      "name": "Webhook",
+      "webhookId": "3b08acdf-2a17-4064-b4ef-8471cb5d24c1",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the Link Analyzer output safely\nconst raw      = $input.item.json.output || '';\nconst formData = $('Prepare Data').item.json;\n\nlet analysis = {};\ntry {\n  const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();\n  analysis = JSON.parse(cleaned);\n} catch(e) {\n  analysis = {\n    stylePrompt: '',\n    toneWords: [],\n    sentenceStyle: '',\n    headingStyle: '',\n    paragraphLength: '',\n    keyPhrases: [],\n    uniqueFeatures: '',\n    topKeywords: []\n  };\n}\n\nlet refStyleInjection = '';\nif (analysis.stylePrompt && analysis.stylePrompt.trim() !== '') {\n  refStyleInjection = `\nREFERENCE WEBSITE STYLE ANALYSIS (from: ${formData.refLink})\nThe following style intelligence was extracted from the reference website. Blend these characteristics naturally into the blog:\n\nStyle Prompt: ${analysis.stylePrompt}\nTone Words to Use: ${(analysis.toneWords || []).join(', ')}\nSentence Style: ${analysis.sentenceStyle}\nHeading Style: ${analysis.headingStyle}\nParagraph Length: ${analysis.paragraphLength}\nKey Phrases from Their Blog: ${(analysis.keyPhrases || []).join(', ')}\nUnique Features: ${analysis.uniqueFeatures}\nTop Keywords from Their Site: ${(analysis.topKeywords || []).join(', ')}\n\nIMPORTANT: Mirror this website's blog style, formatting patterns, and vocabulary choices throughout the new blog while still following the primary writing style (${formData.styleName}). The reference site's style should enhance and refine the final output.`;\n}\n\nreturn {\n  json: {\n    ...formData,\n    refStyleInjection,\n    refAnalysis: analysis\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4240,
+        1580
+      ],
+      "id": "ec6e8e7f-bcac-415f-92a0-d53bec918e3d",
+      "name": "Parse Link Analysis"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://blogmads-ai-c4e242164f63.herokuapp.com/api/blog-result",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "jobId",
+              "value": "={{ $('Webhook').item.json.body.jobId }}"
+            },
+            {
+              "name": "blogContent",
+              "value": "={{ $('Blog Writer').item.json.output }}"
+            },
+            {
+              "name": "productRefLink",
+              "value": "={{ $('Results').item.json.productRefLink }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5520,
+        2000
+      ],
+      "id": "9256e007-a11a-40bd-9c2b-87fc4a423cdd",
+      "name": "data forward"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Has Reference Link?": {
+      "main": [
+        [
+          {
+            "node": "Link Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Link Skip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Parse Link Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Link Skip": {
+      "main": [
+        [
+          {
+            "node": "Generate Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Keywords": {
+      "main": [
+        [
+          {
+            "node": "Parse Keyword",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Link Analyzer": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Link Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Generate Keywords": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Keywords",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Keyword": {
+      "main": [
+        [
+          {
+            "node": "Build prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build prompt": {
+      "main": [
+        [
+          {
+            "node": "Blog Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Blog Writer": {
+      "main": [
+        [
+          {
+            "node": "Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Blog Writer": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Blog Writer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Results": {
+      "main": [
+        [
+          {
+            "node": "data forward",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Blocked?": {
+      "main": [
+        [
+          {
+            "node": "Respond Blocked",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "form Prepare Data": {
+      "main": [
+        []
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Has Reference Link?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "form Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Link Analysis": {
+      "main": [
+        [
+          {
+            "node": "Generate Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": 300
+  },
+  "versionId": "e5857eb2-8cff-472c-89f1-7fbd8abe2431",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "85e4aea19de2d285c91b909a8dcd3d895ad511f5c888998471db1734c996c1ee"
+  },
+  "id": "jKB741eBKojwEsdz",
+  "tags": []
+}
